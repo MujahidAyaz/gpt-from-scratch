@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# PyTorch checkpoints
+*.pt
+*.pth
+*.ckpt
+
+# Local data
+data/*
+
+# Keep folder structure
+!data/.gitkeep
+
+# Checkpoints
+checkpoints/*
+
+# Keep folder structure
+!checkpoints/.gitkeep
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment variables
+.env
