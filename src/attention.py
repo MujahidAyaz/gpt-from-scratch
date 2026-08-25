@@ -2,9 +2,23 @@ import torch
 import torch.nn as nn
 
 
+# ============================================================
+# Self-Attention Head
+# ============================================================
+
 class SelfAttentionHead(nn.Module):
-    def __init__(self, embedding_dim, head_size, block_size):
+
+    def __init__(
+        self,
+        embedding_dim: int,
+        head_size: int,
+        block_size: int
+    ):
         super().__init__()
+
+        # ----------------------------------------------------
+        # Key, Query, Value projections
+        # ----------------------------------------------------
 
         self.key = nn.Linear(
             embedding_dim,
@@ -24,7 +38,19 @@ class SelfAttentionHead(nn.Module):
             bias=False
         )
 
+        # ----------------------------------------------------
         # Causal mask
+        #
+        # Prevents a token from attending to future tokens.
+        #
+        # Example:
+        #
+        # 1 0 0 0
+        # 1 1 0 0
+        # 1 1 1 0
+        # 1 1 1 1
+        # ----------------------------------------------------
+
         self.register_buffer(
             "tril",
             torch.tril(
@@ -35,69 +61,99 @@ class SelfAttentionHead(nn.Module):
             )
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Input:
+            x -> [batch_size, sequence_length, embedding_dim]
 
-        B, T, C = x.shape
+        Output:
+            output -> [batch_size, sequence_length, head_size]
+        """
 
-        # -------------------------
+        _, T, _ = x.shape
+
+        # ----------------------------------------------------
         # Create Q, K, V
-        # -------------------------
+        # ----------------------------------------------------
 
         key = self.key(x)
+
         query = self.query(x)
+
         value = self.value(x)
 
-        # -------------------------
+        # ----------------------------------------------------
         # Attention scores
-        # -------------------------
+        #
+        # Q @ K^T
+        # ----------------------------------------------------
 
         scores = query @ key.transpose(-2, -1)
 
-        # -------------------------
-        # Scale
-        # -------------------------
+        # ----------------------------------------------------
+        # Scale attention scores
+        #
+        # Prevents extremely large values before softmax.
+        # ----------------------------------------------------
 
-        scores = scores / (key.size(-1) ** 0.5)
+        scores = scores / (
+            key.size(-1) ** 0.5
+        )
 
-        # -------------------------
-        # Causal mask
-        # -------------------------
+        # ----------------------------------------------------
+        # Causal masking
+        #
+        # Future tokens receive -infinity.
+        # After softmax they become zero.
+        # ----------------------------------------------------
 
         scores = scores.masked_fill(
             self.tril[:T, :T] == 0,
             float("-inf")
         )
 
-        # -------------------------
-        # Convert scores → weights
-        # -------------------------
+        # ----------------------------------------------------
+        # Convert scores into probabilities
+        # ----------------------------------------------------
 
         attention_weights = torch.softmax(
             scores,
             dim=-1
         )
 
-        # -------------------------
-        # Weighted values
-        # -------------------------
+        # ----------------------------------------------------
+        # Weighted sum of values
+        # ----------------------------------------------------
 
         output = attention_weights @ value
 
-        return query, key, value, output, attention_weights
+        return output
 
 
+# ============================================================
+# Multi-Head Self-Attention
+# ============================================================
 
 class MultiHeadAttention(nn.Module):
 
     def __init__(
         self,
-        embedding_dim,
-        num_heads,
-        block_size
+        embedding_dim: int,
+        num_heads: int,
+        block_size: int
     ):
         super().__init__()
 
+        if embedding_dim % num_heads != 0:
+            raise ValueError(
+                "embedding_dim must be divisible by num_heads."
+            )
+
         head_size = embedding_dim // num_heads
+
+        # ----------------------------------------------------
+        # Create multiple independent attention heads
+        # ----------------------------------------------------
 
         self.heads = nn.ModuleList(
             [
@@ -110,20 +166,29 @@ class MultiHeadAttention(nn.Module):
             ]
         )
 
+        # ----------------------------------------------------
+        # Combine information from all heads
+        # ----------------------------------------------------
+
         self.projection = nn.Linear(
             embedding_dim,
             embedding_dim
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Input:
+            [batch_size, sequence_length, embedding_dim]
 
-        outputs = []
+        Output:
+            [batch_size, sequence_length, embedding_dim]
+        """
 
-        for head in self.heads:
-
-            _, _, _, output, _ = head(x)
-
-            outputs.append(output)
+        # Run every attention head
+        outputs = [
+            head(x)
+            for head in self.heads
+        ]
 
         # Concatenate heads
         out = torch.cat(

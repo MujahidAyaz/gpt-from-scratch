@@ -1,36 +1,39 @@
 import torch
 
 
-def create_sequences(data, block_size):
+def get_batch(
+    data: torch.Tensor,
+    batch_size: int,
+    block_size: int,
+    device: str = "cpu"
+):
     """
-    Create input-target pairs for next-token prediction.
-    """
+    Randomly sample a batch of input/target sequences.
 
-    inputs = []
-    targets = []
-
-    for i in range(len(data) - block_size):
-        inputs.append(data[i:i + block_size])
-        targets.append(data[i + 1:i + block_size + 1])
-
-    X = torch.stack(inputs)
-    Y = torch.stack(targets)
-
-    return X, Y
-
-
-def get_batch(X, Y, batch_size):
-    """
-    Randomly sample a batch of training examples.
+    X contains the current sequence.
+    Y contains the same sequence shifted by one character.
     """
 
-    indices = torch.randint(
-        low=0,
-        high=len(X),
-        size=(batch_size,)
+    # Random starting positions
+    ix = torch.randint(
+        len(data) - block_size,
+        (batch_size,)
     )
 
-    x_batch = X[indices]
-    y_batch = Y[indices]
+    # Input sequences
+    x = torch.stack([
+        data[i:i + block_size]
+        for i in ix
+    ])
 
-    return x_batch, y_batch
+    # Target sequences shifted by one position
+    y = torch.stack([
+        data[i + 1:i + block_size + 1]
+        for i in ix
+    ])
+
+    # Move tensors to device
+    x = x.to(device)
+    y = y.to(device)
+
+    return x, y

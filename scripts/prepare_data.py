@@ -1,53 +1,126 @@
+import csv
+import sys
 import torch
 
 from src.tokenizer import CharacterTokenizer
-from src.dataset import create_sequences
 
 
-# Load text
-with open("data/input.txt", "r", encoding="utf-8") as file:
-    text = file.read()
+# -----------------------------
+# CSV helper
+# -----------------------------
+
+def load_text_from_csv(path: str) -> str:
+    """
+    Load the text column from a CSV file.
+    """
+
+    csv.field_size_limit(sys.maxsize)
+
+    with open(
+        path,
+        "r",
+        encoding="utf-8",
+        newline=""
+    ) as file:
+
+        reader = csv.DictReader(file)
+
+        rows = list(reader)
+
+    texts = [
+        row["text"]
+        for row in rows
+        if row["text"]
+    ]
+
+    return "\n".join(texts)
 
 
-# Create tokenizer
-tokenizer = CharacterTokenizer(text)
+# -----------------------------
+# Load datasets
+# -----------------------------
 
-print(f"Dataset length: {len(text)} characters")
-print(f"Vocabulary size: {tokenizer.vocab_size}")
+train_text = load_text_from_csv(
+    "data/train.csv"
+)
 
+validation_text = load_text_from_csv(
+    "data/validation.csv"
+)
 
-# Encode entire dataset
-data = tokenizer.encode(text)
-
-print(f"First 50 token IDs:")
-print(data[:50])
-
-
-# Convert to tensor
-data = torch.tensor(data, dtype=torch.long)
-
-
-# Create training sequences
-block_size = 32
-
-X, Y = create_sequences(data, block_size)
+test_text = load_text_from_csv(
+    "data/test.csv"
+)
 
 
-print(f"\nInput shape:  {X.shape}")
-print(f"Target shape: {Y.shape}")
+# -----------------------------
+# Tokenizer
+# -----------------------------
+
+tokenizer = CharacterTokenizer(
+    train_text
+)
 
 
-# Show first example
-print("\nFirst input:")
-print(X[0])
+# -----------------------------
+# Encode datasets
+# -----------------------------
 
-print("\nFirst target:")
-print(Y[0])
+train_data = torch.tensor(
+    tokenizer.encode(train_text),
+    dtype=torch.long
+)
+
+validation_data = torch.tensor(
+    tokenizer.encode(validation_text),
+    dtype=torch.long
+)
+
+test_data = torch.tensor(
+    tokenizer.encode(test_text),
+    dtype=torch.long
+)
 
 
-# Decode first example
-print("\nDecoded input:")
-print(tokenizer.decode(X[0].tolist()))
+# -----------------------------
+# Information
+# -----------------------------
 
-print("\nDecoded target:")
-print(tokenizer.decode(Y[0].tolist()))
+print("Training characters:", len(train_text))
+print("Validation characters:", len(validation_text))
+print("Test characters:", len(test_text))
+
+print("\nVocabulary size:", tokenizer.vocab_size)
+
+print("\nTraining tokens:", len(train_data))
+print("Validation tokens:", len(validation_data))
+print("Test tokens:", len(test_data))
+
+
+# -----------------------------
+# Preview
+# -----------------------------
+
+print("\nFirst 100 training tokens:")
+print(train_data[:100].tolist())
+
+print("\nDecoded training text:")
+print(
+    tokenizer.decode(
+        train_data[:100].tolist()
+    )
+)
+
+print("\nDecoded validation text:")
+print(
+    tokenizer.decode(
+        validation_data[:100].tolist()
+    )
+)
+
+print("\nDecoded test text:")
+print(
+    tokenizer.decode(
+        test_data[:100].tolist()
+    )
+)

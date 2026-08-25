@@ -1,28 +1,33 @@
 class CharacterTokenizer:
-    """Simple character-level tokenizer."""
+    """
+    Character-level tokenizer.
+
+    Converts characters to integer token IDs and back.
+    """
 
     def __init__(self, text: str):
-        # Get every unique character and sort them
-        self.vocab = sorted(set(text))
+        self.chars = sorted(set(text))
 
-        # Character → integer
+        self.vocab_size = len(self.chars)
+
         self.stoi = {
-            ch: i for i, ch in enumerate(self.vocab)
+            ch: i
+            for i, ch in enumerate(self.chars)
         }
 
-        # Integer → character
         self.itos = {
-            i: ch for i, ch in enumerate(self.vocab)
+            i: ch
+            for i, ch in enumerate(self.chars)
         }
-
-    @property
-    def vocab_size(self):
-        return len(self.vocab)
 
     def encode(self, text: str):
-        """Convert text into integer token IDs."""
-        return [self.stoi[ch] for ch in text]
+        return [
+            self.stoi[ch]
+            for ch in text
+        ]
 
-    def decode(self, token_ids):
-        """Convert token IDs back into text."""
-        return "".join(self.itos[i] for i in token_ids)
+    def decode(self, tokens):
+        return "".join(
+            self.itos[token]
+            for token in tokens
+        )
