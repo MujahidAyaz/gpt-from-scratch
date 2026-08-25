@@ -1,32 +1,72 @@
 class CharacterTokenizer:
-    """
-    Character-level tokenizer.
 
-    Converts characters to integer token IDs and back.
-    """
+    def __init__(self, text=None, chars=None):
+        """
+        Character-level tokenizer.
 
-    def __init__(self, text: str):
-        self.chars = sorted(set(text))
+        During training:
+            CharacterTokenizer(text)
 
-        self.vocab_size = len(self.chars)
+        During validation/test:
+            CharacterTokenizer(chars=training_vocabulary)
+        """
+
+        if chars is not None:
+
+            self.chars = sorted(chars)
+
+        elif text is not None:
+
+            self.chars = sorted(
+                set(text)
+            )
+
+        else:
+
+            raise ValueError(
+                "Provide either text or chars."
+            )
+
+        self.vocab_size = len(
+            self.chars
+        )
 
         self.stoi = {
-            ch: i
-            for i, ch in enumerate(self.chars)
+            character: index
+            for index, character
+            in enumerate(self.chars)
         }
 
         self.itos = {
-            i: ch
-            for i, ch in enumerate(self.chars)
+            index: character
+            for index, character
+            in enumerate(self.chars)
         }
 
-    def encode(self, text: str):
+
+    def encode(self, text):
+
+        unknown_characters = set(text) - set(
+            self.stoi.keys()
+        )
+
+        if unknown_characters:
+
+            raise ValueError(
+                "Unknown characters found: "
+                + repr(
+                    sorted(unknown_characters)
+                )
+            )
+
         return [
-            self.stoi[ch]
-            for ch in text
+            self.stoi[character]
+            for character in text
         ]
 
+
     def decode(self, tokens):
+
         return "".join(
             self.itos[token]
             for token in tokens
